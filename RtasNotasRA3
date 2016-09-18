@@ -1,0 +1,56 @@
+Ejercicio N1 - NotasRA3 pag 44
+COMO CAMBIA LA INFERENCIA DE LOS PARAMETROS AL CAMBIAR LA DISTRIBUCION INICIAL
+TODO LO QUE TIENE TILDE EN EL TXT DE JAGS DEBE ESTAR INICIALIZADA
+
+Los datos son Binomiales
+Propuestas de distribucion inicial del parametro
+
+a) DISTRIBUCIONES POSTERIORES
+Beta inicial con datos del año pasado Be(89.4, 59.6) que vienen del 60% y desvio del 0.04
+
+                mean         sd        2.5%         25%         50%         75%       97.5%
+deviance 140.4747997 1.64390849 138.6421654 139.2248873 140.0717868 141.2535185 144.6359947
+theta      0.5594313 0.03173382   0.4976988   0.5382885   0.5598331   0.5804666   0.6207238
+x1[1]      0.5635556 0.49616481   0.0000000   0.0000000   1.0000000   1.0000000   1.0000000
+x1[2]      0.5706667 0.49520117   0.0000000   0.0000000   1.0000000   1.0000000   1.0000000
+
+CRITERIO DE INFORMACIÓN DEVIANZA (DIC). La generalización está basada en la distribución posterior de la devianza:
+[1] 141.826
+
+b) DISTRIBUCIONES POSTERIORES
+inicial del parametro: Normal trasnformada - como eligió el profesor
+                mean        sd        2.5%         25%         50%         75%       97.5%
+deviance 140.3874377 1.6147301 138.6367610 139.1205548 139.9841627 141.1682099 144.5902796
+theta      0.5567927 0.0331725   0.4881743   0.5349016   0.5579998   0.5791647   0.6202774
+x1[1]      0.5653333 0.4959336   0.0000000   0.0000000   1.0000000   1.0000000   1.0000000
+x1[2]      0.5795556 0.4938499   0.0000000   0.0000000   1.0000000   1.0000000   1.0000000
+
+DIC:
+print(out.dic)
+[1] 141.6911
+
+c)  DISTRIBUCIONES POSTERIORES
+distribucion inicial de referencia, o no informativa, no contiene información inicial
+(Beta(1/2, 1/2))
+
+               mean         sd        2.5%         25%         50%         75%     97.5%
+deviance 139.5655775 1.19540633 138.6306477 138.7390729 139.1002405 139.9025800 142.87650
+theta      0.4983263 0.04807448   0.4084954   0.4631113   0.4976729   0.5325884   0.58929
+x1[1]      0.4817778 0.49989006   0.0000000   0.0000000   0.0000000   1.0000000   1.00000
+x1[2]      0.4977778 0.50021743   0.0000000   0.0000000   0.0000000   1.0000000   1.00000
+> print(out.dic)
+[1] 140.2801
+
+d) Ejercicio extra - Mezcla de Betas
+Esta es conjugada respecto de la Beta inicial.
+                mean         sd        2.5%         25%         50%
+deviance 139.4881100 1.25030871 138.6301915 138.6968544 138.9902501
+eta        1.0044444 0.06654794   1.0000000   1.0000000   1.0000000
+theta      0.4998412 0.04604582   0.4118289   0.4696074   0.5009089
+                 75%       97.5%
+deviance 139.7357573 142.8871905
+eta        1.0000000   1.0000000
+theta      0.5297827   0.5921463
+print(out.dic)
+[1] 140.0348
+
