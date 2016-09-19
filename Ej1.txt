@@ -1,0 +1,49 @@
+model
+{
+#Likelihood - Distribucion de los datos
+for (i in 1:n) {
+	x[i] ~ dbin(theta,1)
+	}
+#Priors - Iniciales para Theta, el parametro
+#----------
+#Inciso a:
+theta ~ dbeta(89.4,59.6)
+# la final seria una bin-beta porque es un analisis conjugado
+#
+# RECORDAR: TODO LO QUE TIENE ~ ACA DEBE TENER UNA LINEA INIT EN R.
+#
+#----------
+# Inciso b
+# Los datos son los mismos, Ber, pero ahora no es un analisis conjugado, sino con una 
+# distribucion normal transformada.
+# la final seria … quien sabe porque no es conjugada, ya que theta se distribuye 
+# Normal transformada
+
+#theta <- exp(lambda)/(1+exp(lambda))
+# OJOOOOO: En OpenBugs la normal se escribe con Media y precision. En R es con media 
+# y desviacion estandard.
+
+#lambda ~ dnorm(0.4054,33.33)
+
+
+#----------
+#Inciso c
+# Distribucion inicial de referencia es la Uniforme
+#theta ~ dbeta(0.5,0.5)
+
+#----------
+# Inciso extra
+# Distribucion inicial es una Mezcla de Betas - linea 225
+#p[1]<-0.3
+#p[2]<-0.7
+#a<-10/eta
+#b<-10/eta*lam
+#theta ~ dbeta(a,b)
+#eta ~ dcat(p[])
+#lam <- 2.01-eta
+#----------
+#Predictive
+for (j in 1:2) {
+	x1[j] ~ dbin(theta,1)
+	}
+}

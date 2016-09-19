@@ -1,0 +1,25 @@
+model
+{
+#Likelihood - Distribucion de los datos
+for (i in 1:n) {
+	x[i] ~ dbin(theta,1)
+	}
+#Priors - Iniciales para Theta, el parametro
+#----------
+# Inciso b
+# Los datos son los mismos, Ber, pero ahora no es un analisis conjugado, sino con una 
+# distribucion normal transformada.
+# la final seria … quien sabe porque no es conjugada, ya que theta se distribuye 
+# Normal transformada
+theta <- exp(lambda)/(1+exp(lambda))
+lambda ~ dnorm(0.4054,33.33)
+# OJOOOOO: En OpenBugs la normal se escribe con Media y precision. En R es con media 
+# y desviacion estandard.
+# Entonces 33.33 es la precision
+# El desvio std = 1(sqrt(33.33)) -> sigma^2/eta=(1/(sqrt(33.33)))^2=1/33.33
+#----------
+#Predictive
+for (j in 1:2) {
+	x1[j] ~ dbin(theta,1)
+	}
+}

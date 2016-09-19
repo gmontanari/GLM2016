@@ -1,0 +1,9 @@
+---
+title: "GLM: Proceso de Inferencia - Simulacion vias Cadenas de Markov"
+output: html_notebook
+---
+
+```{r}
+install.packages("R2OpenBUGS")
+```
+

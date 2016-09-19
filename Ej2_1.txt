@@ -1,0 +1,17 @@
+model
+{
+#Likelihood
+for (i in 1:n) {
+	x[i] ~ dnorm(mu,tau)
+	}
+tau<-1/pow(sig,2)
+#Priors 
+#----------
+#Inciso a
+mu ~ dnorm(200,tau0)
+tau0<-1/40
+sig ~ dgamma(10,1)
+#----------
+#Prediction
+x1 ~ dnorm(mu,tau)
+}

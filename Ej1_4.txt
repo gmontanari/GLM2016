@@ -1,0 +1,24 @@
+model
+{
+#Likelihood - Distribucion de los datos
+for (i in 1:n) {
+	x[i] ~ dbin(theta,1)
+	}
+#Priors - Iniciales para Theta, el parametro
+
+#----------
+# Inciso extra
+# Distribucion inicial es una Mezcla de Betas - linea 225
+p[1]<-0.3
+p[2]<-0.7
+a<-10/eta
+b<-10/eta*lam
+theta ~ dbeta(a,b)
+eta ~ dcat(p[])
+lam <- 2.01-eta
+#----------
+#Predictive
+for (j in 1:2) {
+	x1[j] ~ dbin(theta,1)
+	}
+}
