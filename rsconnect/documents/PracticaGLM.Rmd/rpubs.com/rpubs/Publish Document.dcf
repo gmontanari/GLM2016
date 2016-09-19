@@ -1,0 +1,8 @@
+name: Publish Document
+title:
+account: rpubs
+server: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/210211/5bf178ac3f354766b0dfe2cfac1696c8
+bundleId: https://api.rpubs.com/api/v1/document/210211/5bf178ac3f354766b0dfe2cfac1696c8
+url: http://rpubs.com/Pacotita/210211
+when: 1474223525.45686
