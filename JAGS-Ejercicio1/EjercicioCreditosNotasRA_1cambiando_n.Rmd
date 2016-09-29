@@ -1,0 +1,134 @@
+---
+title: "Ejercicio de Clase - Creditos - Notas 3 - pag 43"
+output: html_notebook
+---
+### Paquetes requeridos para correr el ejercicio
+
+```{r}
+install.packages("R2OpenBUGS")
+install.packages("R2jags")
+library(R2OpenBUGS)
+library(R2jags)
+
+#-Working directory-
+wdir<-"/Users/guillemontanari/ITAM/github/GLM2016/JAGS-Ejercicio1"
+setwd(wdir)
+```
+
+### 1) Sea  la tasa de créditos hipotecarios otorgados por un banco. Durante el 2004 la tasa promedio fue de 60% y la desviación estándar de la tasa fue de 0.04. En lo que va del año 2005 se han solicitado 100 créditos, de los cuales se han otorgado únicamente 50.
+
+Esto quiere decir que tengo como INFORMACION INICIAL lo siguiente:
+
+  $x1,...,xn$ es una m.a.  proveniente de una dist Bernoulli (exito=otorgado, fracaso=no otorgado)
+  
+  $f(\theta)$   Distribución Inicial
+  
+  $n=100$ la muestra que tengo hoy, de los cuales se han aprobado 50.
+  
+  $\sum xi=50$ Este es un estadistico, la suma de las Xis
+  
+  Además me dicen: en la historia del Banco, la tasa promedio fué del 60% y la desviación de 0.04.
+  
+  $E(\theta)= 0.6$
+  
+  $\sigma(\theta)= 0.04$
+  
+  
+  #### a) Usando la información del año pasado, encuentra la distribución beta que mejor describe el conocimiento inicial.
+  
+  $\theta$ $\~$ $Beta(a,b)$   Distribución Inicial me dicen es Beta
+  
+  $E(\theta)= a/(a+b)=0.6$
+  
+  $Var(\theta)= (ab)/((a+b)^2(a+b+1))=(0.04)^2$
+  
+  Despejando....
+  
+  a= 89.4 y b= 59.6
+  
+  Entonces la distribuion inicial seria $\theta$ $\~$  $Beta(89.4,59.6)$
+  
+```{r}
+#--- Ejemplo 1---
+#-Reading data-
+n<-1000
+credito<-c(rep(1,n/2),rep(0,n/2))
+#-Defining data-
+data<-list("n"=n,"x"=credito)
+#-Defining inits-
+inits<-function(){list(theta=0.5,x1=rep(1,2))}
+#-Selecting parameters to monitor-
+parameters<-c("theta","x1")
+#-Running code-
+#JAGS
+ej1.sim<-jags(data,inits,parameters,model.file="Ej1_1.txt",
+              n.iter=5000,n.chains=1,n.burnin=500,n.thin=1)
+```
+```{r}
+#-Monitoring chain-
+#Traza de la cadena
+traceplot(ej1.sim)
+```
+```{r}
+#Cadena
+#JAGS
+out<-ej1.sim$BUGSoutput$sims.list
+z<-out$theta
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+
+```
+Primer cuadro: como se está moviendo theta
+Segundo: como esta convergiendo o no la media. Si se mueve mucho necesito mas iteraciones.
+Tercero: Histograma de mi posterior. Si tengo "huecos" entonces necesito mas iteraciones porque hay espacios de mi parámetro que no estoy recorriendo
+Cuarto: Correlacion entre las variables simulados. En este caso es 0 (dos rayas azules muy pegadas a cero)
+
+
+```{r}
+#Resumen (estimadores)
+#JAGS
+out.sum<-ej1.sim$BUGSoutput$summary
+print(out.sum)
+#DIC
+#JAGS
+out.dic<-ej1.sim$BUGSoutput$DIC
+print(out.dic)
+```
+
+Este resumen me dice
+theta      media  0.5593453 y un desvio standard de 0.03160825
+Quantiles: para estimar con un 95% digo que Theta esta entre 0.4974438-0.6215499
+DIC: 141.8086
+
+```
+Usando el archivo Ej1_1.txt
+# model: Mi modelo, distribucion de los datos  - dbin(theta,1) es una Bernoulli(theta)
+#Priors - Iniciales para Theta, el parametro
+#Predictive: quiero que me prediga dos futuros creditos, que también proviene de una bernoulli
+#Predictiva: Esta es la forma de como decirle a JAGS que prediga
+
+model
+{
+for (i in 1:n) {
+	x[i] ~ dbin(theta,1)
+	}
+#Priors
+#----------
+#Inciso a:
+theta ~ dbeta(89.4,59.6)
+# la final seria una bin-beta porque es un analisis conjugado
+# RECORDAR: TODO LO QUE TIENE ~ ACA DEBE TENER UNA LINEA INIT EN R.
+#Predictive
+for (j in 1:2) {
+	x1[j] ~ dbin(theta,1)
+	}
+}
+```
+
+n=10 DIC [1] 14.34691
+n=100 DIC [1] 141.808
+n=1000 DIC [1] 1389.935
+n=10000 DIC [1] 13865.09

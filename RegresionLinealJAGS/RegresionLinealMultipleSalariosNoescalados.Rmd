@@ -1,0 +1,254 @@
+---
+title: "Ejercicio 4: Regresión Lineal Múltiple: Análisis de Salarios"
+output: html_notebook
+---
+
+#### Paquetes
+```{r}
+#install.packages("R2OpenBUGS")
+#install.packages("R2jags")
+```
+#### Librerias
+```{r}
+library(R2OpenBUGS)
+library(R2jags)
+```
+####-Working directory-
+```{r}
+wdir<-"/Users/guillemontanari/ITAM/github/GLM2016/RegresionLinealJAGS"
+setwd(wdir)
+```
+
+### Funciones Útiles
+```{r}
+prob<-function(x){
+  out<-min(length(x[x>0])/length(x),length(x[x<0])/length(x))
+  out
+}
+```
+
+Un investigador desea evaluar la relación entre el salario anual de trabajadores de una compañía de nivel medio y alto (Y, en miles
+de dólares) y el índice de calidad de trabajo (X1), número de años de experiencia (X2) y el índice de éxito en publicaciones (X3).
+La muestra consiste de 24 trabajadores. 
+a) Realiza un análisis Bayesiano completo de los datos 
+
+b)obtén las predicciones de salarios para 3 nuevos empleados con variables explicativas:
+x1F= 5.4,17,6.0
+x2F= 6.2,12,5.8
+x1F= 6.4,21,6.1
+
+### Parte a: Análisis Bayesiano completo
+
+Cargo datos
+
+```{r}
+#salarios.df <- read.table("salarios.csv", header = TRUE, sep=",")
+#summary(salarios.df)
+salarios<-read.table("http://allman.rhon.itam.mx/~lnieto/index_archivos/salarios.txt",header=TRUE)
+n<-nrow(salarios)
+summary(salarios)
+```
+
+Defino los datos sin escalar para que calcule las yf
+```{r}
+x1f<-c(5.4,6.2,6.4)
+x2f<-c(17,12,21)
+x3f<-c(6.0,5.8,6.1)
+m<-3
+```
+
+```{r}
+hist(salarios$Y)
+hist(salarios$X1)
+hist(salarios$X2)
+hist(salarios$X3)
+```
+
+Cargo los datos sin escalar a una lista para que JAGS los pueda leer
+
+```{r}
+data <- list("n" = n,"y"=salarios$Y,"x1"=salarios$X1,"x2"=salarios$X2,
+             "x3"=salarios$X3,"x1f"=x1f,"x2f"=x2f,"x3f"=x3f,"m"=m)
+```
+
+Defino los inits y parametros
+```{r}
+inits<- function(){list(beta=rep(0,4),tau=1,yf=rep(0,3))}
+parameters<-c("beta","tau","yf")
+```
+
+## Ejecutamos la simulacion
+```{r}
+ej3.sim<-jags(data,inits,parameters,model.file="Ej4_1.txt",
+              n.iter=100000,n.chains=1,n.burnin=10000,n.thin=1)
+```
+### Monitoreamos la cadena
+#### Traza
+```{r}
+#traceplot(ej3.sim)
+```
+#### Cadena - Analizo Beta2 (Pendiente)
+```{r}
+out<-ej3.sim$BUGSoutput$sims.list
+# Guardo los valores de Beta2 en Z: Beta2 son los coeficientes asociados a las x2 que es la pendiente
+z<-out$beta[,2]
+# Defino 4 zonas de ploteo
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+```
+
+### En la distribucion final de Beta2, la pendiente en este modelo, cercana a 1. Estoy alejada del cero, entonces mi coeficiente de la pendiente es significativamente distinta de cero. Mi histograma no tiene huecos, por lo tanto esta es una muestra de la distribucion que puedo tomar para hacer inferencias
+
+### Hago lo mismo para Bet1, la ordenada al origen
+
+```{r}
+z<-out$beta[,1]
+# Defino 4 zonas de ploteo
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+```
+### Beta1, toma valores alrededor de 18. 
+
+### Hago lo mismo para Beta3
+
+```{r}
+z<-out$beta[,3]
+# Defino 4 zonas de ploteo
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+```
+
+### Hago lo mismo para Beta4
+
+```{r}
+z<-out$beta[,4]
+# Defino 4 zonas de ploteo
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+```
+
+### Correlacion entre Beta1 y Beta2
+```{r}
+#z<-out$beta
+# Defino 1 zona de ploteo
+#par(mfrom=c(1,1))
+#plot(z)
+```
+### Resumen de estimadores
+```{r}
+out.sum<-ej3.sim$BUGSoutput$summary
+print(out.sum)
+```
+
+### Si quiero estimar de manera puntua:
+Beta1: alrededor de 17.77 con un desvío de 2.11. 
+Beta2: alrededor de 1.11 con un desvio de 0.34
+Beta3: alrededor de 0.32 con un desvio de 0.039
+Beta4:alrededor de 1.29 con un desvio de 0.31
+ 
+.Como esta es la media, es la funcion de pérdida cuadrática la que estoy usando para mi función de  pérdida.
+
+### Lo que mas me va a importar son los intervalos de estimacion de credibilidad del 95%:
+
+### Beta1 [ 13.57 - 21.92]
+### Beta2 [ 0.42 - 1.79]
+### Beta3 [ 0.24 - -0.40]
+### Beta4 [ 0.67 - 1.92]
+
+### Existe otro indicador que me es más útil para tomar la decisión de si un coeficiente está cercano a cero o no.  La probabilidad de que Beta1 sea menor a cero?. Y esta es la distribución final 
+
+### Probabilidades - Beta1
+```{r}
+z<-out$beta[,1]
+hist(z,freq=FALSE)
+abline(v=0,col=2)
+```
+
+### La probabilidad final de que Beta1 sea mqyor a cero: 
+
+```{r}
+1 - prob(z)
+prob(z)
+```
+### La probabilidad de que Beta1 sea mayor a cero es 0.99, 99%, es mas que el 95% que vimos en los intervalos. Entonces mi coeficiente Beta1 es significativamente distinto de cero. La proba es chiquita lo tomo, asi es como se interpreta mi valor "p".
+
+### Probabilidades - Beta2
+```{r}
+z<-out$beta[,2]
+hist(z,freq=FALSE)
+abline(v=0,col=2)
+```
+### La probabilidad final de que Beta2 sea mayor a cero:
+
+```{r}
+1-prob(z)
+prob(z)
+```
+### Probabilidades - Beta3
+```{r}
+z<-out$beta[,3]
+hist(z,freq=FALSE)
+abline(v=0,col=2)
+```
+
+### La probabilidad final de que Beta3 sea mayor a cero:
+
+```{r}
+1-prob(z)
+prob(z)
+```
+
+### Probabilidades - Beta4
+```{r}
+z<-out$beta[,4]
+hist(z,freq=FALSE)
+abline(v=0,col=2)
+```
+
+### La probabilidad final de que Beta1 sea mayor a cero:
+
+```{r}
+1-prob(z)
+prob(z)
+```
+
+### DIC
+```{r}
+out.dic<-ej3.sim$BUGSoutput$DIC
+print(out.dic)
+```
+### Siempre es importante escalar los datos si están en escalas muy chicas o muy grandes para resolver problemas numéricos.
+
+
+### Predicciones: el vector out.sum contiene todas las predicciones y quiero filtrar solo las yf para poder graficarlas
+
+
+```{r}
+out.yf1<-out.sum[grep("yf",rownames(out.sum)),]
+or<-order(calif$MO)
+ymin<-min(calif$SP,out.yf1[,c(1,3,7)])
+ymax<-max(calif$SP,out.yf1[,c(1,3,7)])
+par(mfrow=c(1,1))
+plot(calif$MO,calif$SP,ylim=c(ymin,ymax))
+lines(calif$MO[or],out.yf1[or,1],lwd=2,col=2)
+lines(calif$MO[or],out.yf1[or,3],lty=2,col=2)
+lines(calif$MO[or],out.yf1[or,7],lty=2,col=2)
+lines(calif$MO[or],out.yf2[or,1],lwd=2,col=5)
+lines(calif$MO[or],out.yf2[or,3],lty=2,col=5)
+lines(calif$MO[or],out.yf2[or,7],lty=2,col=5)
+```
+
+### Aqui tenemos graficados el estimador puntual (raya continua) y nuestros intervalos de predicción (lineas punteadas). Si nuestros intervalos de predicción contienen a los valores estimados, como en este caso todos los puntos están contenidos, entonces mi modelo es bueno.
+

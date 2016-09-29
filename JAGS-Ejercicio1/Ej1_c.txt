@@ -1,0 +1,17 @@
+model
+{
+#Likelihood - Distribucion de los datos
+for (i in 1:n) {
+	x[i] ~ dbin(theta,1)
+	}
+#Priors - Iniciales para Theta, el parametro
+#----------
+#Inciso c
+# Distribucion inicial de referencia es la Uniforme
+theta ~ dbeta(0.5,0.5)
+#----------
+#Predictive
+for (j in 1:2) {
+	x1[j] ~ dbin(theta,1)
+	}
+}

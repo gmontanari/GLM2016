@@ -1,0 +1,190 @@
+---
+title: "Ejercicio de Clase - Creditos - Notas 3 - pag 43"
+output: html_notebook
+---
+### Paquetes requeridos para correr el ejercicio
+
+```{r}
+install.packages("R2OpenBUGS")
+install.packages("R2jags")
+library(R2OpenBUGS)
+library(R2jags)
+
+#-Working directory-
+wdir<-"/Users/guillemontanari/ITAM/github/GLM2016/JAGS-Ejercicio1"
+setwd(wdir)
+```
+
+### 1) Sea  la tasa de créditos hipotecarios otorgados por un banco. Durante el 2004 la tasa promedio fue de 60% y la desviación estándar de la tasa fue de 0.04. En lo que va del año 2005 se han solicitado 100 créditos, de los cuales se han otorgado únicamente 50.
+
+Esto quiere decir que tengo como INFORMACION INICIAL lo siguiente:
+
+  $x1,...,xn$ es una m.a.  proveniente de una dist Bernoulli (exito=otorgado, fracaso=no otorgado)
+  
+  $f(\theta)$   Distribución Inicial
+  
+  $n=100$ la muestra que tengo hoy, de los cuales se han aprobado 50.
+  
+$\sum xi=50$ Este es un estadistico, la suma de las Xis es mi $\tilde\theta$ ESTIMADOR MAXIMO VEROSIMIL
+  
+  Además me dicen: en la historia del Banco, la tasa promedio fué del 60% y la desviación de 0.04.
+  
+  $E(\theta)= 0.6$
+  
+  $\sigma(\theta)= 0.04$
+  
+  
+#### b) Usando la información del año pasado, encuentra la distribución normal transformada que mejor describa el conocimiento inicial.
+
+ $x1,...,xn$ es una m.a.  proveniente de una dist Bernoulli (exito=otorgado, fracaso=no otorgado)
+ 
+ $x1/\theta$ $\~$ $Beta(\theta)$
+ 
+ $\theta$ $\~$  $Beta(89.4,59.6)$
+ 
+ No vamos a hacer un análisis conjugado, porque sabemos que la distribución final es otra Beta. En vez de usar la Beta que tenemos inicial, vamos a usar otra, que no es conjugada.
+ 
+ Para eso vamos a trasnformar $\theta$, con una transformación logística:
+ 
+ $\eta = log (\theta/(1-\theta))$
+
+Como $\theta$ está en los Reales positivos, si le aplico esa función, obtengo un nuevo parámetro $\eta$ que estará en  todos los Reales, ya que el logaritmo de esa función me devuelve números reales.
+
+Si  $\eta = log (\theta/(1-\theta))$ $\in$ $R$
+
+Puedo consruir una función normal, pero para regresar a $\theta$:
+
+$\theta= e^2/(1+e^2)$ $\in$ $(0,1)$
+
+Entonces voy a construir:
+
+$\eta$ $\~$ $Normal(\mu,\sigma^2)$
+
+que satisfaga las restricciones de la $\theta$ inicial:
+
+1. Si $\theta$ está alrededor de 0.6, $\eta$ alrededor de que valores estará? Uso la transformación:
+
+$\eta = log (\theta/(1-\theta))$
+
+$\eta = log (0.6/(1-0.6))$ = $log(0.6/0.4$ = 0.4054
+
+Ese será nuestro punto central de $\eta$.
+
+Ahora debo estimar un $\sigma^2$, de forma tal que cuando regrese la transformación hacia $\theta$ me dé $0.04^2$
+
+  
+```{r}
+#--- Ejemplo 1---
+#-Reading data-
+n<-100
+credito<-c(rep(1,n/2),rep(0,n/2))
+#-Defining data-
+data<-list("n"=n,"x"=credito)
+#-Defining inits-
+inits<-function(){list(eta=0, x1=rep(1,2))}
+#-Selecting parameters to monitor-
+parameters<-c("theta","x1")
+#-Running code-
+#JAGS
+ej1.sim<-jags(data,inits,parameters,model.file="Ej1_b.txt",
+              n.iter=5000,n.chains=1,n.burnin=500,n.thin=1)
+```
+```{r}
+#-Monitoring chain-
+#Traza de la cadena
+traceplot(ej1.sim)
+```
+Comparando esta grafica de Theta respecto del ejericicio 1.a vemos que theta se mueve adecuadamente en el espacio muestral, sin embargo lo hace más lentamente - la gráfica no es tan sólida -.
+
+La razon de esto es que no es un análisis conjugado: no estamos simulando directamente de la distribución final de manera independiente como en el inciso 1.a, sino, estamos simulando a través de la cadena. 
+
+
+```{r}
+#Cadena
+#JAGS
+out<-ej1.sim$BUGSoutput$sims.list
+z<-out$theta
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+
+```
+Primer cuadro: como se está moviendo theta
+
+Segundo: como esta convergiendo o no la media. Si se mueve mucho necesito mas iteraciones.
+
+Tercero: Histograma de mi posterior. Si tengo "huecos" entonces necesito mas iteraciones porque hay espacios de mi parámetro que no estoy recorriendo
+
+Cuarto: Correlacion entre las variables simulados. En este caso es 0 (dos rayas azules muy pegadas a cero)
+
+
+```{r}
+#Resumen (estimadores)
+#JAGS
+out.sum<-ej1.sim$BUGSoutput$summary
+print(out.sum)
+#DIC
+#JAGS
+out.dic<-ej1.sim$BUGSoutput$DIC
+print(out.dic)
+```
+
+ESTE RESUMEN ME DICE
+
+Para mis datos: 
+ $x1...xn$ es una m.a.  proveniente de una dist Bernoulli (exito=otorgado, fracaso=no otorgado)
+ 
+Con distribuion inicial Normal Transformada de $\theta$ con $\eta$ a traves de logaritmos:
+
+ $\eta = log (\theta/(1-\theta))$ $\in$ $R$
+ 
+ RESULTA EN:
+ 
+- La media posterior de $\theta$ 
+
+- El desvío estandard de  $\theta$ 
+
+- Los quantiles de  $\theta$  donde puedo precisar un intervalo de confianza del 95% con los quantiles [2.50-97.5]
+
+- DIC:  es la medida del error del modelo. Cuanto más chico mejor.
+
+AUNQUE NO LE DI UNA DISTRIBUCION CONJUDADA AL PAQUETE, NO LE IMPORTO Y ME LA DIÓ.
+
+```
+Usando el archivo Ej1_b.txt
+# model: Mi modelo, distribucion de los datos  - dbin(theta,1) es una Bernoulli(theta)
+#Priors - Iniciales para Theta, el parametro
+#Predictive: quiero que me prediga dos futuros creditos, que también proviene de una bernoulli
+#Predictiva: Esta es la forma de como decirle a JAGS que prediga
+
+model
+{
+#Likelihood - Distribucion de los datos
+for (i in 1:n) {
+	x[i] ~ dbin(theta,1)
+	}
+#Priors - Iniciales para Theta
+# Inciso b
+# Los datos son los mismos, Ber, pero ahora no es un analisis conjugado, sino con una distribucion normal transformada.
+# la final seria … quien sabe porque no es conjugada, ya que theta se distribuye 
+# OJOOOOO: 
+#     - En OpenBugs la normal se escribe con Media y precision
+#     - En R es con media y desviacion estandard
+#     - Nosotros en el pizarron la escribimos con Media y Sigma Cuadrada
+# Entonces 33.33 es la precision
+# El desvio std = 1(sqrt(33.33)) -> sigma^2/eta=(1/(sqrt(33.33)))^2=1/33.33
+
+# Normal transformada - Mu(eta) =.4054 y SigmaCuadrada(Eta)=1/33.33
+
+theta <- exp(eta)/(1+exp(eta))
+eta ~ dnorm(0.4054,33.33)
+
+#----------
+#Predictive
+for (j in 1:2) {
+	x1[j] ~ dbin(theta,1)
+	}
+}
+```

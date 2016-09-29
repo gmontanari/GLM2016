@@ -1,0 +1,18 @@
+model
+{
+#Likelihood - Distribucion de los datos
+for (i in 1:n) {
+	x[i] ~ dbin(theta,1)
+	}
+#Priors - Iniciales para Theta, el parametro
+#----------
+#Inciso a:
+theta ~ dbeta(89.4,59.6)
+# la final seria una bin-beta porque es un analisis conjugado
+# RECORDAR: TODO LO QUE TIENE ~ ACA DEBE TENER UNA LINEA INIT EN R.
+#
+#Predictive
+for (j in 1:2) {
+	x1[j] ~ dbin(theta,1)
+	}
+}

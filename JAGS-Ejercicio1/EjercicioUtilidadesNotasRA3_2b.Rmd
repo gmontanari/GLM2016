@@ -1,0 +1,135 @@
+---
+title: "Ejercicio de Clase - Creditos - Notas 3 - pag 43"
+output: html_notebook
+---
+### Paquetes requeridos para correr el ejercicio
+
+```{r}
+install.packages("R2OpenBUGS")
+install.packages("R2jags")
+library(R2OpenBUGS)
+library(R2jags)
+
+#-Working directory-
+wdir<-"/Users/guillemontanari/ITAM/github/GLM2016/JAGS-Ejercicio1"
+setwd(wdir)
+```
+
+### 2) Las utilidades mensuales de una compañía tienen una distribución Normal(Mu, Sigma Cuadrada)
+
+Ponga que una muestra de 10 meses de esta compañía dio como resultado las siguientes utilidades: (212, 207, 210, 196, 223, 193,196, 210, 202, 221).
+
+Esto quiere decir que tengo como INFORMACION INICIAL lo siguiente:
+
+  $x1,...,xn$ es una m.a.  10 meses con determinados valores dados
+  
+  $f(\theta)$   Distribución Inicial una dist Normal $\Normal(\mu,\sigma^2)$ 
+  
+  $n=10$ la muestra que tengo hoy de las utilidades mensuales.
+  
+  #### a) La incertidumbre sobre la utilidad promedio anual se puede representar por una distribución N(200,40), y la   incertidumbre de la desviación estándar de las utilidades mensuales se puede representar mediante una distribución Ga(10,1). 
+  
+  Mediante la distribución posterior estima $\mu$ y $\sigma^2$
+  
+```{r}
+#-Reading data-
+utilidad<-c(212, 207, 210,196, 223, 193,196, 210, 202, 221)
+n<-length(utilidad)
+
+# Media Muestral es 207 y Desvio Std 10.32
+
+#-Defining data-
+data<-list("n"=n,"x"=utilidad)
+
+#-Defining inits-
+inits<-function(){list(mu=0,sig=1,x1=0)}
+
+#-Selecting parameters to monitor-
+parameters<-c("mu","sig","x1")
+
+#-Running code-
+#JAGS
+ej2b.sim<-jags(data,inits,parameters,model.file="Ej2_b.txt",
+              n.iter=5000,n.chains=1,n.burnin=500,n.thin=1)
+```
+
+```{r}
+#-Monitoring chain-
+#Traza de la cadena
+traceplot(ej2b.sim)
+```
+
+```{r}
+#Cadena
+#JAGS
+out<-ej2b.sim$BUGSoutput$sims.list
+z<-out$x1
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+```
+Primer cuadro: como se está moviendo theta
+
+Segundo: como esta convergiendo o no la media. Si se mueve mucho necesito mas iteraciones.
+
+Tercero: Histograma de mi posterior. Si tengo "huecos" entonces necesito mas iteraciones porque hay espacios de mi parámetro que no estoy recorriendo
+
+Cuarto: Correlacion entre las variables simulados. En este caso es 0 (dos rayas azules muy pegadas a cero)
+
+
+```{r}
+#Resumen (estimadores)
+#JAGS
+out.sum<-ej2b.sim$BUGSoutput$summary
+print(out.sum)
+#DIC
+#JAGS
+out.dic<-ej2b.sim$BUGSoutput$DIC
+print(out.dic)
+```
+ESTE RESUMEN ME DICE
+
+Para mis datos: 
+ $x1...xn$ es una m.a. que provienen de un $\Normal=(\mu,\sigma^2)$
+ 
+  RESULTA EN:
+ 
+- La media posterior de $\mu$ es el valor de mu=mean 
+
+- El desvío estandard $\sigma^2$ es el valor de sig=mean
+
+- Los quantiles de  donde puedo precisar un intervalo de confianza del 95%, estan determinados por las columnas 2.5%-97.5% para las columnas mu, sig
+
+En este caso la distribucion final tiene una distribucion final: media 0.26 desvio 0.99, sigma 89 desvio de 7.46
+
+Mis datos son 9, son pocos, con una dist N(207,95) entonces en este caso pesan mas los datos generados que provienen de una distribucion no informativa inicial.
+
+- DIC:  es la medida del error del modelo. Cuanto más chico mejor.
+
+```
+Usando el archivo Ej2_b.txt
+# model: Mi modelo, distribucion de los datos  - 
+#Priors - Iniciales para Theta, el parametro
+#Predictive: quiero que me prediga dos futuros valores de x
+#Predictiva: Esta es la forma de como decirle a JAGS que prediga
+
+model
+{
+#Likelihood
+for (i in 1:n) {
+	x[i] ~ dnorm(mu,tau)
+	}
+tau<-1/pow(sig,2)
+#Priors 
+#----------
+#Inciso a
+mu ~ dnorm(0,0.0001)
+tau0<-1/1
+sig ~ dgamma(0.001,0.001)
+#----------
+#Prediction
+x1 ~ dnorm(mu,tau)
+}
+```

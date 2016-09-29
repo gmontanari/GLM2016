@@ -1,0 +1,167 @@
+---
+title: "Ejercicio de Clase - Creditos - Notas 3 - pag 43"
+output: html_notebook
+---
+### Paquetes requeridos para correr el ejercicio
+
+```{r}
+install.packages("R2OpenBUGS")
+install.packages("R2jags")
+library(R2OpenBUGS)
+library(R2jags)
+
+#-Working directory-
+wdir<-"/Users/guillemontanari/ITAM/github/GLM2016/JAGS-Ejercicio1"
+setwd(wdir)
+```
+
+### 1) Sea  la tasa de créditos hipotecarios otorgados por un banco. Durante el 2004 la tasa promedio fue de 60% y la desviación estándar de la tasa fue de 0.04. En lo que va del año 2005 se han solicitado 100 créditos, de los cuales se han otorgado únicamente 50.
+
+Esto quiere decir que tengo como INFORMACION INICIAL lo siguiente:
+
+  $x1,...,xn$ es una m.a.  proveniente de una dist Bernoulli (exito=otorgado, fracaso=no otorgado)
+  
+  $f(\theta)$   Distribución Inicial
+  
+  $n=100$ la muestra que tengo hoy, de los cuales se han aprobado 50.
+  
+  $\sum xi=50$ Este es un estadistico, la suma de las Xis
+  
+  Además me dicen: en la historia del Banco, la tasa promedio fué del 60% y la desviación de 0.04.
+  
+  $E(\theta)= 0.6$
+  
+  $\sigma(\theta)= 0.04$
+  
+  
+#### Vamos a hacer una ejercicio con una mezcla de Betas
+
+```{r}
+#Mezcla de betas
+pp=0.3
+w<-seq(0.01,0.99,,100)
+fw<-dbeta(w,10,10)
+par(mfrow=c(1,1))
+plot(w,fw,type="l")
+
+w<-seq(0.01,0.99,,100)
+fw<-dbeta(w,6,0.01)
+par(mfrow=c(1,1))
+plot(w,fw,type="l")
+
+# DIST INICIAL
+w<-seq(0.01,0.99,,100)
+pp<-0.3
+fw<-pp*dbeta(w,10,10.1)+(1-pp)*dbeta(w,5,0.05)
+par(mfrow=c(1,1))
+plot(w,fw,type="l")
+```
+
+ Este ejemplo ilustra como favorecer dos valores donde yo creo que puede estar el parámetro ($\theta$), en este caso 0.5 y 1, SIN DESCARTAR LOS DEMAS VALORES, PARA EL CASO DE QUE LOS DATOS LUEGO ME INDIQUEN QUE EL VALOR VERDADERO ES DIFERENTE DE AQUELLOS QUE YO PENSE INICIALMENTE.
+ 
+ Esto consiste en utilizar una distribucion inicial de referencia para $\theta$ 
+ 
+ Cual es la distribucion de referencia de una Beta dado un modelo Bernoulli?
+ 
+ Consulto el formulario - Análisis Inferenciales - Si mis datos son Ber entonces mi distribucion inicial de referencia es una Beta(.5,.5)
+ 
+```{r}
+#--- Ejemplo 1---
+#-Reading data-
+n<-100
+credito<-c(rep(1,n/2),rep(0,n/2))
+#-Defining data-
+data<-list("n"=n,"x"=credito)
+#-Defining inits-
+inits<-function(){list(theta=0.5, x1=rep(1,2))}
+#-Selecting parameters to monitor-
+parameters<-c("theta","x1")
+#-Running code-
+#JAGS
+ej1.sim<-jags(data,inits,parameters,model.file="Ej1_c.txt",
+              n.iter=5000,n.chains=1,n.burnin=500,n.thin=1)
+```
+```{r}
+#-Monitoring chain-
+#Traza de la cadena
+traceplot(ej1.sim)
+```
+Comparando esta grafica de Theta respecto del ejericicio 1.a vemos que theta se mueve adecuadamente en el espacio muestral, sin embargo lo hace más lentamente - la gráfica no es tan sólida -.
+
+La razon de esto es que no es un análisis conjugado: no estamos simulando directamente de la distribución final de manera independiente como en el inciso 1.a, sino, estamos simulando a través de la cadena. 
+
+
+```{r}
+#Cadena
+#JAGS
+out<-ej1.sim$BUGSoutput$sims.list
+z<-out$theta
+par(mfrow=c(2,2))
+plot(z,type="l")
+plot(cumsum(z)/(1:length(z)),type="l")
+hist(z,freq=FALSE)
+acf(z)
+
+```
+Primer cuadro: como se está moviendo theta
+
+Segundo: como esta convergiendo o no la media. Si se mueve mucho necesito mas iteraciones.
+
+Tercero: Histograma de mi posterior. Si tengo "huecos" entonces necesito mas iteraciones porque hay espacios de mi parámetro que no estoy recorriendo
+
+Cuarto: Correlacion entre las variables simulados. En este caso es 0 (dos rayas azules muy pegadas a cero)
+
+
+```{r}
+#Resumen (estimadores)
+#JAGS
+out.sum<-ej1.sim$BUGSoutput$summary
+print(out.sum)
+#DIC
+#JAGS
+out.dic<-ej1.sim$BUGSoutput$DIC
+print(out.dic)
+```
+
+ESTE RESUMEN ME DICE
+
+Para mis datos: 
+ $x1...xn$ es una m.a.  proveniente de una dist Bernoulli (exito=otorgado, fracaso=no otorgado)
+ 
+Con distribuion inicial de Referencia de $\theta$ Beta(0.5,0.5)
+
+ RESULTA EN:
+ 
+- La media posterior de $\theta$ no es tan precisa, porque la distribución inicial es la de referencia, es decir no sabe nada de los datos, como en los incisos a) y b), donde se tiene el conocimiento de los datos, aunque sean de distintas familias, está contenido en los parámetros a) y b) de la Beta. 
+
+En el inciso c) no contiene información inicial, la Beta de referencia, es No Informativa. Por lo tanto la inferencia depende exclusivamente de los datos. Y por eso mi distribucion final esta localizada alrededor de un valor (0.50) distinto al de a) y b) (0.55). Y por eso mismo la desviación estándard aumenta. Y los quantiles están un poco movidos.
+
+- DIC:  es la medida del error del modelo. Cuanto más chico mejor.
+
+EN ESTE CASO, AL USAR LA DIST NO INFORMATIVA INICIAL, MIS ESTIMACIONES SON MENOS CERTERAS.
+
+```
+Usando el archivo Ej1_C.txt
+# model: Mi modelo, distribucion de los datos  - dbin(theta,1) es una Bernoulli(theta)
+#Priors - Iniciales para Theta, el parametro
+#Predictive: quiero que me prediga dos futuros creditos, que también proviene de una bernoulli
+#Predictiva: Esta es la forma de como decirle a JAGS que prediga
+
+model
+{
+#Likelihood - Distribucion de los datos
+for (i in 1:n) {
+	x[i] ~ dbin(theta,1)
+	}
+#Priors - Iniciales para Theta, el parametro
+#----------
+#Inciso c
+# Distribucion inicial de referencia es la Uniforme
+theta ~ dbeta(0.5,0.5)
+#----------
+#Predictive
+for (j in 1:2) {
+	x1[j] ~ dbin(theta,1)
+	}
+}
+```
